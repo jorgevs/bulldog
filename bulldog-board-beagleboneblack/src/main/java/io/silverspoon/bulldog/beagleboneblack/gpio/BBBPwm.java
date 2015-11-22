@@ -78,13 +78,16 @@ public class BBBPwm extends AbstractPwm {
       }
    }
 
-   private void installOverlay(String overlay) throws FileNotFoundException, IOException, InterruptedException {
+   private void installOverlay(String overlay) throws IOException, InterruptedException {
       String deviceFileName = String.format(FILENAME_TEMPLATE, getPin().getName(), VERSION);
       DeviceTreeCompiler.compileOverlay(overlay, deviceFileName);
    }
 
    private String createOverlay(long period, long duty) throws IOException {
-      InputStream stream = this.getClass().getResourceAsStream("/org/bulldog/beagleboneblack/devicetree/resources/pwm.dts.template");
+      //InputStream stream = this.getClass().getResourceAsStream("/org/bulldog/beagleboneblack/devicetree/resources/pwm.dts.template");
+      System.out.println("Using: /devicetree/pwm.dts.template");
+      InputStream stream = this.getClass().getResourceAsStream("/devicetree/pwm.dts.template");
+
       String overlay = BulldogUtil.convertStreamToString(stream);
       stream.close();
 
