@@ -29,7 +29,9 @@ public class I2CLcdDisplay implements Lcd {
     protected int rows;
     protected int columns;
 
-    private boolean fourBitsMode = false;   // true: 4 BITS COMMUNICATION / false: 8 BITS COMMUNICATION
+    private HD44780Mode mode = HD44780Mode.EightBit;   // COMMUNICATION_MODE: 4 BITS or 8 BITS
+    private boolean writeAsNibbles = false;
+
     private boolean backlight = true;
     private I2cConnection connection;
 
@@ -38,33 +40,28 @@ public class I2CLcdDisplay implements Lcd {
         this.rows = rows;
         this.columns = columns;
         this.connection = bus.createI2cConnection(i2cAddress);
-        init(numBitsMode);
+        this.mode = numBitsMode;
+        init();
     }
 
-    private void init(HD44780Mode numBitsMode) throws Exception {
+    private void init() {
         // Initialization commands for Hitachi HD44780U LCD Display
         // Wait for more than 15 ms after VCC rises to 4.5 V
         BulldogUtil.sleepMs(30); // Let LCD power up
 
-        // Sends the following commands sequences as a 8 bits
-        this.setFourBitsMode(false);
-
-        // Following bytes are all Command bytes, i.e. address = 0x00
-        writeCommand((byte) (0x03 << 4)); // Write Nibble 0x03 three times (per HD44780U initialization spec)
-        BulldogUtil.sleepMs(10); // (per HD44780U initialization spec)
-        writeCommand((byte) (0x03 << 4)); // Write Nibble 0x03 three times (per HD44780U initialization spec)
-        BulldogUtil.sleepMs(10); // (per HD44780U initialization spec)
-        writeCommand((byte) (0x03 << 4)); // Write Nibble 0x03 three times (per HD44780U initialization spec)
+        // Write Nibble 0011 three times (per HD44780U initialization spec)
+        writeCommand((byte) 0b00110000);
+        BulldogUtil.sleepMs(10);
+        writeCommand((byte) 0b00110000);
+        BulldogUtil.sleepMs(10);
+        writeCommand((byte) 0b00110000);
         BulldogUtil.sleepMs(10);
 
-        // Function set: Set interface to be 4 bits long (only 1 cycle write).
-        writeCommand((byte) (0x02 << 4)); // Write Nibble 0x02 once - Set interface to be 4 bits long
-        BulldogUtil.sleepMs(10);
-
-
-        // If numBitsMode is not FourBit, then it sends all other command sequences as a 8 bits
-        if (numBitsMode == HD44780Mode.FourBit) {
-            this.setFourBitsMode(true);
+        if(this.mode == HD44780Mode.FourBit) {
+            // Function set: Set interface to be 4 bits long (only 1 cycle write).
+            writeCommand((byte) (0x02 << 4)); // Write Nibble 0x02 once - Set interface to be 4 bits long
+            BulldogUtil.sleepMs(10);
+            setWriteAsNibbles(true);
         }
 
         // Function set: DL=0;Interface is 4 bits, N=1; 2 Lines, F=0; 5x8 dots font)
@@ -85,10 +82,12 @@ public class I2CLcdDisplay implements Lcd {
     }
 
     private void writeCommand(byte data) {
+        log.debug("writeCommand(" + BulldogUtil.printBinaryValue((byte)data) + ")");
         writeByte(data, LCD_RS_COMMAND);
     }
 
     private void writeData(byte data) {
+        log.debug("writeData(" + BulldogUtil.printBinaryValue((byte)data) + ")");
         writeByte(data, LCD_RS_DATA);
         BulldogUtil.sleepMs(10);
     }
@@ -98,23 +97,27 @@ public class I2CLcdDisplay implements Lcd {
         try {
             // Put the Upper 4 bits data
             lcdValue = (byte) ((data & 0xF0) | LCD_BL | registerType);
+            log.debug("--writeByteAsNibbles(" + BulldogUtil.printBinaryValue((byte)(lcdValue | LCD_EN)) + ")");
             connection.writeByte(lcdValue | LCD_EN);
             BulldogUtil.sleepMs(10);
 
             // Write Enable Pulse E: Hi -> Lo
+            log.debug("--writeByteAsNibbles(" + BulldogUtil.printBinaryValue((byte)(lcdValue & ~LCD_EN)) + ")");
             connection.writeByte(lcdValue & ~LCD_EN);
             BulldogUtil.sleepMs(10);
 
-            if (this.isFourBitsMode()) {
+            if (getWriteAsNibbles()) {
                 // LCD Data PCA8574:    P7, P6, P5, P4
                 // LCD Control PCA8574: P3:Back Light, P2:E-Enable, P1:RW, P0:RS
 
                 // Put the Lower 4 bits data
                 lcdValue = (byte) (((data << 4) & 0xF0) | LCD_BL | registerType);
+                log.debug("--writeByteAsNibbles(" + BulldogUtil.printBinaryValue((byte)(lcdValue | LCD_EN)) + ")");
                 connection.writeByte(lcdValue | LCD_EN);
                 BulldogUtil.sleepMs(10);
 
                 // Write Enable Pulse E: Hi -> Lo
+                log.debug("--writeByteAsNibbles(" + BulldogUtil.printBinaryValue((byte)(lcdValue & ~LCD_EN)) + ")");
                 connection.writeByte(lcdValue & ~LCD_EN);
                 BulldogUtil.sleepMs(10);
             }
@@ -123,21 +126,20 @@ public class I2CLcdDisplay implements Lcd {
         }
     }
 
-    protected boolean isFourBitsMode() {
-        return fourBitsMode;
-    }
-
-    protected void setFourBitsMode(boolean fourBitsMode) {
-        this.fourBitsMode = fourBitsMode;
-    }
-
-
     public void setBacklight(boolean backlight) {
         this.backlight = backlight;
     }
 
     public boolean isBacklight() {
         return backlight;
+    }
+
+    public boolean getWriteAsNibbles() {
+        return writeAsNibbles;
+    }
+
+    public void setWriteAsNibbles(boolean writeAsNibbles) {
+        this.writeAsNibbles = writeAsNibbles;
     }
 
     @Override
