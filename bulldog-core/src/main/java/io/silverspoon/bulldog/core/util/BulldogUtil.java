@@ -66,4 +66,8 @@ public final class BulldogUtil {
    public static final int getUnsignedByte(byte b) {
       return b & 0xFF;
    }
+
+   public static String printBinaryValue(byte value) {
+      return String.format("%8s", Integer.toBinaryString(value & 0xFF)).replace(' ', '0');
+   }
 }
