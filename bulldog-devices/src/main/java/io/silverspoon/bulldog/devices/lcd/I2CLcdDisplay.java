@@ -2,6 +2,7 @@ package io.silverspoon.bulldog.devices.lcd;
 
 import io.silverspoon.bulldog.core.io.bus.i2c.I2cBus;
 import io.silverspoon.bulldog.core.io.bus.i2c.I2cConnection;
+import io.silverspoon.bulldog.core.io.bus.i2c.I2cDevice;
 import io.silverspoon.bulldog.core.util.BulldogUtil;
 import io.silverspoon.bulldog.core.util.easing.StringUtil;
 import org.apache.log4j.Logger;
@@ -12,7 +13,7 @@ import org.apache.log4j.Logger;
  *
  **/
 
-public class I2CLcdDisplay implements Lcd {
+public class I2CLcdDisplay extends I2cDevice implements Lcd {
     final static Logger log = Logger.getLogger(I2CLcdDisplay.class);
 
     // LCD Commands
@@ -49,13 +50,17 @@ public class I2CLcdDisplay implements Lcd {
     private boolean showCursor = false; // Cursor is on/off
     private boolean blinkCursor = false;    // Blink the character at the cursor position
 
-    private I2cConnection connection;
 
     public I2CLcdDisplay(LcdMode lcdMode, LcdFont lcdFont, I2cBus bus, int i2cAddress) {
+        super(bus.createI2cConnection(i2cAddress));
         this.lcdMode = lcdMode;
         this.lcdFont = lcdFont;
-        this.connection = bus.createI2cConnection(i2cAddress);
         init();
+    }
+
+    public I2CLcdDisplay(I2cBus bus, int i2cAddress) {
+        //Creates a I2CLcdDisplay object with default settings
+        this(LcdMode.Display2x16, LcdFont.Font_8x10, bus, i2cAddress);
     }
 
     private void init() {
@@ -140,12 +145,12 @@ public class I2CLcdDisplay implements Lcd {
 
             // Enable Pulse E: HI
             log.debug("  writeByte(" + printCtrlBits(BulldogUtil.printBinaryValue((byte)(lcdValue | LCD_EN))) + ") - twoCycleTrans: " + twoCycleTrans);
-            connection.writeByte((byte)(lcdValue | LCD_EN));
+            writeByte((byte)(lcdValue | LCD_EN));
             BulldogUtil.sleepMs(2);
 
             // Disable Pulse E: LOW
             log.debug("  writeByte(" + printCtrlBits(BulldogUtil.printBinaryValue((byte)(lcdValue & ~LCD_EN))) + ") - twoCycleTrans: " + twoCycleTrans);
-            connection.writeByte((byte)(lcdValue & ~LCD_EN));
+            writeByte((byte)(lcdValue & ~LCD_EN));
             BulldogUtil.sleepMs(2);
 
             if (twoCycleTrans) {
@@ -154,12 +159,12 @@ public class I2CLcdDisplay implements Lcd {
 
                 // Enable Pulse E: HI
                 log.debug("  writeByte(" + printCtrlBits(BulldogUtil.printBinaryValue((byte)(lcdValue | LCD_EN))) + ") - twoCycleTrans: " + twoCycleTrans);
-                connection.writeByte((byte)(lcdValue | LCD_EN));
+                writeByte((byte)(lcdValue | LCD_EN));
                 BulldogUtil.sleepMs(2);
 
                 // Disable Pulse E: LOW
                 log.debug("  writeByte(" + printCtrlBits(BulldogUtil.printBinaryValue((byte)(lcdValue & ~LCD_EN))) + ") - twoCycleTrans: " + twoCycleTrans);
-                connection.writeByte((byte)(lcdValue & ~LCD_EN));
+                writeByte((byte)(lcdValue & ~LCD_EN));
                 BulldogUtil.sleepMs(2);
             }
         } catch (Exception ex) {
