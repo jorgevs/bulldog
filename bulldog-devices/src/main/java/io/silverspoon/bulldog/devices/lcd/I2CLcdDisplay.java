@@ -1,7 +1,6 @@
 package io.silverspoon.bulldog.devices.lcd;
 
 import io.silverspoon.bulldog.core.io.bus.i2c.I2cBus;
-import io.silverspoon.bulldog.core.io.bus.i2c.I2cConnection;
 import io.silverspoon.bulldog.core.io.bus.i2c.I2cDevice;
 import io.silverspoon.bulldog.core.util.BulldogUtil;
 import io.silverspoon.bulldog.core.util.easing.StringUtil;
